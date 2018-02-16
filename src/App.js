@@ -93,14 +93,16 @@ const applySnakePosition = (prevState) => {
     getSnakeHead(prevState.snake).x,
     getSnakeHead(prevState.snake).y,
   );
-
-  const snakeTail = isSnakeEating
-    ? prevState.snake.coordinates
-    : getSnakeWithoutStub(prevState.snake);
-
-  const snackCoordinate = isSnakeEating
-    ? getRandomCoordinate()
-    : prevState.snack.coordinate;
+  let snakeTail = getSnakeWithoutStub(prevState.snake);
+  let snackCoordinate = prevState.snack.coordinate;
+  console.log('snakeTail', snakeTail);
+  if (isSnakeEating) {
+    snakeTail = prevState.snake.coordinates;
+    snackCoordinate = getRandomCoordinate();
+    while (isSnake(snackCoordinate.x, snackCoordinate.y, prevState.snake.coordinates)) {
+      snackCoordinate = getRandomCoordinate();
+    }
+  }
 
   return {
     snake: {
