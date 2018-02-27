@@ -2,6 +2,9 @@ import React, { Component } from 'react';
 import cs from 'classnames';
 
 import './App.css';
+import Agent from './brain/Agent';
+
+var agent = new Agent();
 
 const TICK_RATE = 100;
 const GRID_SIZE = 35;
@@ -93,9 +96,11 @@ const applySnakePosition = (prevState) => {
     getSnakeHead(prevState.snake).x,
     getSnakeHead(prevState.snake).y,
   );
+
   let snakeTail = getSnakeWithoutStub(prevState.snake);
+
   let snackCoordinate = prevState.snack.coordinate;
-  console.log('snakeTail', snakeTail);
+
   if (isSnakeEating) {
     snakeTail = prevState.snake.coordinates;
     snackCoordinate = getRandomCoordinate();
@@ -157,6 +162,9 @@ class App extends Component {
         coordinate: getRandomCoordinate(),
       },
       score: 0,
+      lastScore: 0,
+      conf: null,
+      agentDecision: "",
     };
   }
 
@@ -185,6 +193,53 @@ class App extends Component {
       ? this.setState(applyGameOver)
       : this.setState(applySnakePosition);
 
+      if(this.state.configuration !== null && this.state.score > this.state.lastScore){
+        console.log("add");
+        let key = this.state.agentDecision;
+        //agent.trainWhileRunning(this.state.configuration, {key: 1});
+        this.setState({lastScore: this.state.score})
+      }
+      //console.log("prendre une decision: ", getSnakeHead(this.state.snake), " snackCoordinate: ", this.state.snack.coordinate, " direction: ", this.state.playground.direction);
+      this.setState({configuration: {
+          "sx": this.state.snack.coordinate.x,
+          "sy": this.state.snack.coordinate.y,
+          "hx": getSnakeHead(this.state.snake).x,
+          "hy": getSnakeHead(this.state.snake).y,
+          "rwall": (getSnakeHead(this.state.snake).x + 1) >= GRID_SIZE ? 1 : 0,
+          "rbody": isSnake(getSnakeHead(this.state.snake).x+1,getSnakeHead(this.state.snake).y, this.state.snake.coordinates) ? 1 : 0,
+          "lwall": (getSnakeHead(this.state.snake).x - 1) <= 0 ? 1 : 0,
+          "lbody": isSnake(getSnakeHead(this.state.snake).x-1,getSnakeHead(this.state.snake).y, this.state.snake.coordinates) ? 1 : 0,
+          "uwall": (getSnakeHead(this.state.snake).y - 1) <= 0 ? 1 : 0,
+          "ubody": isSnake(getSnakeHead(this.state.snake).x,getSnakeHead(this.state.snake).y-1, this.state.snake.coordinates) ? 1 : 0,
+          "dwall": (getSnakeHead(this.state.snake).y + 1) >= GRID_SIZE ? 1 : 0,
+          "dbody": isSnake(getSnakeHead(this.state.snake).x,getSnakeHead(this.state.snake).y+1, this.state.snake.coordinates) ? 1 : 0
+        }
+      })
+      let decisions = agent.runParcours(this.state.configuration);
+      console.log("conf: ", this.state.configuration);
+      let directionValue = 38;
+      let bestValue = 0;
+      var keys = Object.keys(decisions);
+      for(var i=0;i<keys.length;i++){
+          var key = keys[i];
+          if(decisions[key] > bestValue){
+            switch (key) {
+              case "UP": directionValue = 38;
+                         break;
+              case "DOWN": directionValue = 40;
+                           break;
+              case "LEFT": directionValue = 37;
+                           break;
+              case "RIGHT": directionValue = 39;
+                           break;
+              default: console.log("Erreur: aucune direction trouvees");
+            }
+            bestValue = decisions[key];
+            this.setState({agentDecision: key})
+          }
+      }
+      this.state.playground.direction = KEY_CODES_MAPPER[directionValue];
+
   }
 
   render() {
@@ -209,7 +264,7 @@ class App extends Component {
   }
 }
 
-const GameOver = () => 
+const GameOver = () =>
   <div className="game-over-title">
     You loose shitty player, type "R" to reload hihi !
   </div>
