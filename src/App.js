@@ -1,15 +1,42 @@
 import React, { Component } from 'react';
 import cs from 'classnames';
+import {Grid, AStarFinder} from 'pathfinding';
 
 import './App.css';
 
 const TICK_RATE = 100;
 const GRID_SIZE = 35;
 const GRID = [];
+let pfGrid;
+let finder = new AStarFinder();
+let path = [];
 
 for (let i = 0; i <= GRID_SIZE; i++) {
   GRID.push(i);
 }
+
+// console.log('grid', pfGrid);
+const generateNewFinderGrid = () => {
+  pfGrid = null;
+  pfGrid = new Grid(GRID_SIZE, GRID_SIZE);
+
+  for (let i = 0; i < GRID_SIZE-1; i++) {
+    for (let j = 0; j < GRID_SIZE-1; j++) {
+      if (i == 0 || j == 0 || i == GRID_SIZE-1 || j == GRID_SIZE-1) pfGrid.setWalkableAt(i, j, false);
+    }
+  }
+};
+
+const resetGridWalkableFields = (prevState) => {
+  generateNewFinderGrid();
+  // console.log('prevstate', prevState, pfGrid);
+  prevState.snake.coordinates.forEach((coordinate) => {
+    // console.log('coordinate',coordinate);
+    pfGrid.setWalkableAt(coordinate.x, coordinate.y, false);
+  });
+};
+
+generateNewFinderGrid();
 
 const DIRECTIONS = {
   UP: 'UP',
@@ -89,18 +116,44 @@ const getCellCs = (isGameOver, snake, snack, x, y) =>
 const applySnakePosition = (prevState) => {
   const isSnakeEating = getIsSnakeEating(prevState);
 
-  const snakeHead = DIRECTION_TICKS[prevState.playground.direction](
+  
+  let snakeHead = DIRECTION_TICKS[prevState.playground.direction](
     getSnakeHead(prevState.snake).x,
     getSnakeHead(prevState.snake).y,
   );
 
-  const snakeTail = isSnakeEating
-    ? prevState.snake.coordinates
-    : getSnakeWithoutStub(prevState.snake);
+  let snakeTail = getSnakeWithoutStub(prevState.snake);
+  let snackCoordinate = prevState.snack.coordinate;
+  // console.log('snakeTail', snakeTail);
+  if (isSnakeEating) {
+    snakeTail = prevState.snake.coordinates;
+    snackCoordinate = getRandomCoordinate();
+    while (isSnake(snackCoordinate.x, snackCoordinate.y, prevState.snake.coordinates)) {
+      snackCoordinate = getRandomCoordinate();
+    }
+  }
+    if (isSnakeEating) {
+      console.info('-------------------- eating ------------------------');
+      path = [];  
+    }
+    resetGridWalkableFields(prevState);
+    // console.log("before path", path.length, path.length == 0);
+    path = (path.length == 0) 
+      ? finder.findPath(snakeHead.x, snakeHead.y, 
+        snackCoordinate.x, snackCoordinate.y, pfGrid) 
+      : path;
+    console.log("snakeHead", snakeHead, 'snackCoordinate', snackCoordinate);
+    console.log('after path', path);
 
-  const snackCoordinate = isSnakeEating
-    ? getRandomCoordinate()
-    : prevState.snack.coordinate;
+    let nextPos = path.shift();
+    console.log("nextPos", nextPos);
+    console.log('after pose path', path);
+    snakeHead = {
+      x:nextPos[0],
+      y: nextPos[1]
+    }
+    console.log('new snake head', snakeHead);
+
 
   return {
     snake: {
@@ -182,7 +235,6 @@ class App extends Component {
     getIsSnakeOutside(this.state.snake) || getIsSnakeClumy(this.state.snake)
       ? this.setState(applyGameOver)
       : this.setState(applySnakePosition);
-
   }
 
   render() {
@@ -197,7 +249,7 @@ class App extends Component {
       <div className="app">
         <h1>Snake! {score}</h1>
         {playground.isGameOver ? <GameOver/> : ''}
-        <Grid
+        <GridMap
           snake={snake}
           snack={snack}
           isGameOver={playground.isGameOver}
@@ -212,7 +264,7 @@ const GameOver = () =>
     You loose shitty player, type "R" to reload hihi !
   </div>
 
-const Grid = ({ isGameOver, snake, snack }) =>
+const GridMap = ({ isGameOver, snake, snack }) =>
   <div>
     {GRID.map(y =>
       <Row
