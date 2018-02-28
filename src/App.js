@@ -265,6 +265,10 @@ const setNewPosition = (snakeHead, snackCoordinate) => {
         snack={snack}
         isGameOver={playground.isGameOver}
         />
+        <audio controls autoPlay id="tetris-mp3">
+        <source src="tetris.mp3" type="audio/mpeg"/>
+        Your browser does not support the audio element.
+        </audio>
         </div>
       );
     }
