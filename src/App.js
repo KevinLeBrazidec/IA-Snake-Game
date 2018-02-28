@@ -10,6 +10,7 @@ const GRID = [];
 let pfGrid;
 let finder = new AStarFinder();
 let path = [];
+let nextPos;
 
 for (let i = 0; i <= GRID_SIZE; i++) {
   GRID.push(i);
@@ -113,14 +114,29 @@ const getCellCs = (isGameOver, snake, snack, x, y) =>
     }
   );
 
+const setNewPosition = (snakeHead, snackCoordinate) => {
+  // console.log("before path", path.length, path.length == 0);
+  path = (path.length == 0) 
+  ? finder.findPath(snakeHead.x, snakeHead.y, 
+    snackCoordinate.x, snackCoordinate.y, pfGrid) 
+  : path;
+  console.log('after path', path);
+
+  nextPos = path.shift();
+  if (!nextPos || (nextPos[0] == snakeHead.x && nextPos[1] == snakeHead.y)) {
+    nextPos = setNewPosition(snakeHead, snackCoordinate);
+  }
+
+  return nextPos;
+}
+
 const applySnakePosition = (prevState) => {
   const isSnakeEating = getIsSnakeEating(prevState);
-
   
-  let snakeHead = DIRECTION_TICKS[prevState.playground.direction](
-    getSnakeHead(prevState.snake).x,
-    getSnakeHead(prevState.snake).y,
-  );
+  let snakeHead = {
+    x: getSnakeHead(prevState.snake).x,
+    y: getSnakeHead(prevState.snake).y
+  };
 
   let snakeTail = getSnakeWithoutStub(prevState.snake);
   let snackCoordinate = prevState.snack.coordinate;
@@ -137,15 +153,18 @@ const applySnakePosition = (prevState) => {
       path = [];  
     }
     resetGridWalkableFields(prevState);
-    // console.log("before path", path.length, path.length == 0);
-    path = (path.length == 0) 
-      ? finder.findPath(snakeHead.x, snakeHead.y, 
-        snackCoordinate.x, snackCoordinate.y, pfGrid) 
-      : path;
     console.log("snakeHead", snakeHead, 'snackCoordinate', snackCoordinate);
-    console.log('after path', path);
-
-    let nextPos = path.shift();
+    
+    console.log("nextPos before if", nextPos);
+    nextPos = setNewPosition(snakeHead, snackCoordinate);
+    // if (nextPos[0] == snakeHead.x && nextPos[1] == snakeHead.y) {
+    //   nextPos = path.shift();
+    //   if (!nextPos) {
+    //     path = finder.findPath(snakeHead.x, snakeHead.y, 
+    //       snackCoordinate.x, snackCoordinate.y, pfGrid);
+    //       nextPos = path.shift();
+    //   }
+    // }
     console.log("nextPos", nextPos);
     console.log('after pose path', path);
     snakeHead = {
